@@ -8,7 +8,7 @@ def print_key(key):
 
 try:
     factory = rpi_gpio.KeypadFactory()
-    keypad = factory.create_4_by_3_keypad() # makes assumptions about keypad layout and GPIO pin numbers
+    keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
 
     keypad.registerKeyPressHandler(print_key)
 
