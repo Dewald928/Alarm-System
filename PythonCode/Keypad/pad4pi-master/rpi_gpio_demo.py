@@ -1,10 +1,19 @@
 #!/usr/bin/python
 
+from gpiozero import Buzzer
+from time import sleep
 from pad4pi import rpi_gpio
-import time
+
+
+buzzer = Buzzer(26)
+
 
 def print_key(key):
+    buzzer.on()
+    sleep(0.1)
+    buzzer.off()
     print(key)
+
 
 try:
     factory = rpi_gpio.KeypadFactory()
@@ -14,7 +23,8 @@ try:
 
     print("Press buttons on your keypad. Ctrl+C to exit.")
     while True:
-        time.sleep(1)
+        sleep(1)
+
 except KeyboardInterrupt:
     print("Goodbye")
 finally:

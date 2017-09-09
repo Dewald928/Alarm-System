@@ -4,21 +4,21 @@ from random import randint
 from time import clock
 
 
-# ===============================================
-# TRANSITIONS
+##===============================================
+## TRANSITIONS
 
 class Transition(object):
-    ''' Code executed when transitioning from one state to another '''
+    """ Code executed when transitioning from one state to another """
 
-    def __init__(self, toState):
-        self.toState = toState
+    def __init__(self, tostate):
+        self.toState = tostate
 
     def Execute(self):
         print("Transitioning...")
 
 
-# ===============================================
-# STATES
+##===============================================
+## STATES
 
 class State(object):
     ''' The base template state which all others will inherit from  '''
@@ -39,18 +39,18 @@ class State(object):
         pass
 
 
-class Disarmed(State):
-    ''' Disarmed state '''
+class CleanDishes(State):
+    ''' Cleaning the dishes state '''
 
     def __init__(self, FSM):
-        super(Disarmed, self).__init__(FSM)
+        super(CleanDishes, self).__init__(FSM)
 
     def Enter(self):
-        print("Preparing to Disarm.")
-        super(Disarmed, self).Enter()
+        print("Preparing to clean dishes.")
+        super(CleanDishes, self).Enter()
 
     def Execute(self):
-        print("Disarmed")
+        print("Cleaning dishes")
         if (self.startTime + self.timer <= clock()):
             if not (randint(1, 3) % 2):
                 self.FSM.ToTransition("toVacuum")
@@ -61,23 +61,45 @@ class Disarmed(State):
         print("Finished cleaning dishes.")
 
 
-class Armed(State):
-    ''' Disarmed state '''
+class Vacuum(State):
+    ''' State for vacuuming '''
 
     def __init__(self, FSM):
-        super(Armed, self).__init__(FSM)
+        super(Vacuum, self).__init__(FSM)
 
     def Enter(self):
-        print("Preparing to Arm.")
-        super(Armed, self).Enter()
+        print("Starting to Vacuum")
+        super(Vacuum, self).Enter()
 
     def Execute(self):
-        print("Armed")
+        print("Vacuuming")
+        if (self.startTime + self.timer <= clock()):
+            if not (randint(1, 3) % 2):
+                self.FSM.ToTransition("toSleep")
+            else:
+                self.FSM.ToTransition("toCleanDishes")
+
+    def Exit(self):
+        print("Finished Vacuuming")
+
+
+class Sleep(State):
+    ''' State for Sleeping. Even robots get tired sometimes. :) '''
+
+    def __init__(self, FSM):
+        super(Sleep, self).__init__(FSM)
+
+    def Enter(self):
+        print("Starting to Sleep")
+        super(Sleep, self).Enter()
+
+    def Execute(self):
+        print("Sleeping")
         if (self.startTime + self.timer <= clock()):
             if not (randint(1, 3) % 2):
                 self.FSM.ToTransition("toVacuum")
             else:
-                self.FSM.ToTransition("toSleep")
+                self.FSM.ToTransition("toCleanDishes")
 
     def Exit(self):
-        print("Finished cleaning dishes.")
+        print("Waking up from Sleep")
