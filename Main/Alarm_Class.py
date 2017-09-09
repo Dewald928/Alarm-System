@@ -2,33 +2,30 @@
 # IMPLEMENTATION
 from StateMachine import FSM
 # from States import State
-from States import Sleep
-from States import CleanDishes
-from States import Vacuum
+from States import Disarmed
+from States import Armed
 from States import Transition
 
 
 Char = type("Char", (object,), {})
 
 
-class RobotMaid(Char):
+class Alarm(Char):
     ''' Base character which will be holding the Finite State Machine,
         which in turn will hold the states and transitions. '''
 
     def __init__(self):
         self.FSM = FSM(self)
 
-        ## STATES
-        self.FSM.AddState("Sleep", Sleep(self.FSM))
-        self.FSM.AddState("CleanDishes", CleanDishes(self.FSM))
-        self.FSM.AddState("Vacuum", Vacuum(self.FSM))
+        # STATES
+        self.FSM.AddState("Disarmed", Disarmed(self.FSM))
+        self.FSM.AddState("Armed", Armed(self.FSM))
 
-        ## TRANSITIONS
-        self.FSM.AddTransition("toSleep", Transition("Sleep"))
-        self.FSM.AddTransition("toVacuum", Transition("Vacuum"))
-        self.FSM.AddTransition("toCleanDishes", Transition("CleanDishes"))
+        # TRANSITIONS
+        self.FSM.AddTransition("toDisarmed", Transition("Disarmed"))
+        self.FSM.AddTransition("toArmed", Transition("Armed"))
 
-        self.FSM.SetState("Sleep")
+        self.FSM.SetState("Disarmed")
 
     def Execute(self):
         self.FSM.Execute()

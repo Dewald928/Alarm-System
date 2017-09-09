@@ -38,68 +38,50 @@ class State(object):
     def Exit(self):
         pass
 
-
-class CleanDishes(State):
-    ''' Cleaning the dishes state '''
-
-    def __init__(self, FSM):
-        super(CleanDishes, self).__init__(FSM)
-
-    def Enter(self):
-        print("Preparing to clean dishes.")
-        super(CleanDishes, self).Enter()
-
-    def Execute(self):
-        print("Cleaning dishes")
-        if (self.startTime + self.timer <= clock()):
-            if not (randint(1, 3) % 2):
-                self.FSM.ToTransition("toVacuum")
-            else:
-                self.FSM.ToTransition("toSleep")
-
-    def Exit(self):
-        print("Finished cleaning dishes.")
-
-
-class Vacuum(State):
-    ''' State for vacuuming '''
+# =====================================================================================
+# ++++++++++++++++++++++++++ Disarming State ++++++++++++++++++++++++++++++++++++++++++
+# =====================================================================================
+class Disarmed(State):
 
     def __init__(self, FSM):
-        super(Vacuum, self).__init__(FSM)
+        super(Disarmed, self).__init__(FSM)
 
     def Enter(self):
-        print("Starting to Vacuum")
-        super(Vacuum, self).Enter()
+        print("Starting to Disarm")
+        super(Disarmed, self).Enter()
 
     def Execute(self):
-        print("Vacuuming")
+        print("Disarmed")
         if (self.startTime + self.timer <= clock()):
             if not (randint(1, 3) % 2):
-                self.FSM.ToTransition("toSleep")
+                self.FSM.ToTransition("toArmed")
             else:
-                self.FSM.ToTransition("toCleanDishes")
+                self.FSM.ToTransition("toDisarmed")
 
     def Exit(self):
-        print("Finished Vacuuming")
+        print("Exiting Disarmed")
 
 
-class Sleep(State):
-    ''' State for Sleeping. Even robots get tired sometimes. :) '''
+class Armed(State):
+    ''' Arming state '''
 
     def __init__(self, FSM):
-        super(Sleep, self).__init__(FSM)
+        super(Armed, self).__init__(FSM)
 
     def Enter(self):
-        print("Starting to Sleep")
-        super(Sleep, self).Enter()
+        print("Preparing to Arm")
+        super(Armed, self).Enter()
 
     def Execute(self):
-        print("Sleeping")
+        print("Armed")
         if (self.startTime + self.timer <= clock()):
             if not (randint(1, 3) % 2):
-                self.FSM.ToTransition("toVacuum")
+                self.FSM.ToTransition("toDisarmed")
             else:
-                self.FSM.ToTransition("toCleanDishes")
+                self.FSM.ToTransition("toArmed")
 
     def Exit(self):
-        print("Waking up from Sleep")
+        print("Exiting Armed")
+
+
+
