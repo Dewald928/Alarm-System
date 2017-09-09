@@ -2,10 +2,14 @@
 
 from random import randint
 from time import clock
+from time import sleep
+from gpiozero import Buzzer
+from pad4pi import rpi_gpio
 
+buzzer = Buzzer(26)
 
-##===============================================
-## TRANSITIONS
+# ===============================================
+# TRANSITIONS
 
 class Transition(object):
     """ Code executed when transitioning from one state to another """
@@ -17,8 +21,8 @@ class Transition(object):
         print("Transitioning...")
 
 
-##===============================================
-## STATES
+# ===============================================
+# STATES
 
 class State(object):
     ''' The base template state which all others will inherit from  '''
@@ -38,10 +42,10 @@ class State(object):
     def Exit(self):
         pass
 
-# =====================================================================================
-# ++++++++++++++++++++++++++ Disarming State ++++++++++++++++++++++++++++++++++++++++++
-# =====================================================================================
+
 class Disarmed(State):
+    ''' Disarming State '''
+    a = True #for Active in this state
 
     def __init__(self, FSM):
         super(Disarmed, self).__init__(FSM)
@@ -51,34 +55,76 @@ class Disarmed(State):
         super(Disarmed, self).Enter()
 
     def Execute(self):
+        self.KeypadInitialize()
         print("Disarmed")
-        if (self.startTime + self.timer <= clock()):
-            if not (randint(1, 3) % 2):
+        while True:
+            if self.a == False:
                 self.FSM.ToTransition("toArmed")
-            else:
-                self.FSM.ToTransition("toDisarmed")
+                break
 
     def Exit(self):
         print("Exiting Disarmed")
 
+    def KeypadInitialize(self):
+        factory = rpi_gpio.KeypadFactory()
+        keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
+        keypad.registerKeyPressHandler(self.key_pressed)
+
+    def key_pressed(self, key):
+        try:
+            print(key)
+            int_key = int(key)
+            if int_key >= 0 and int_key <= 9:
+                # digit_entered(key)
+                buzzer.on()
+                sleep(0.1)
+                buzzer.off()
+        except ValueError:
+            self.non_digit_entered(key)
+            buzzer.on()
+            sleep(0.05)
+            buzzer.off()
+            sleep(0.05)
+            buzzer.on()
+            sleep(0.05)
+            buzzer.off()
+
+    def non_digit_entered(self, key):
+        # global entered_passcode
+        # check if all sensors can be activated
+        # +++++++++++++++++++++++++++++++++++++
+        if key == "*":
+            self.a = False
 
 class Armed(State):
     ''' Arming state '''
+    a = True
 
     def __init__(self, FSM):
         super(Armed, self).__init__(FSM)
 
     def Enter(self):
         print("Preparing to Arm")
+        # beep 10 seconds
+        for i in range(10):
+            startTime = clock()
+            timeInterval = 1
+            while (startTime + timeInterval > clock()):
+                pass
+            buzzer.on()
+            sleep(0.1)
+            buzzer.off()
+        buzzer.on()
+        sleep(2)
+        buzzer.off()
         super(Armed, self).Enter()
 
     def Execute(self):
         print("Armed")
-        if (self.startTime + self.timer <= clock()):
-            if not (randint(1, 3) % 2):
-                self.FSM.ToTransition("toDisarmed")
-            else:
+        while True:
+            if self.a == False:
                 self.FSM.ToTransition("toArmed")
+                break
 
     def Exit(self):
         print("Exiting Armed")
