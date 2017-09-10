@@ -5,9 +5,16 @@ from time import clock
 from time import sleep
 from gpiozero import Buzzer
 from pad4pi import rpi_gpio
+import lcddriver
 
+# Buzzer
 buzzer = Buzzer(26)
-
+# LCD Display
+display = lcddriver.lcd()
+display.lcd_display_string("System Disarmed", 1)
+#Keypad
+factory = rpi_gpio.KeypadFactory()
+keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
 # ===============================================
 # TRANSITIONS
 
@@ -45,7 +52,7 @@ class State(object):
 
 class Disarmed(State):
     ''' Disarming State '''
-    a = True #for Active in this state
+    active = True #for Active in this state
 
     def __init__(self, FSM):
         super(Disarmed, self).__init__(FSM)
@@ -55,20 +62,20 @@ class Disarmed(State):
         super(Disarmed, self).Enter()
 
     def Execute(self):
-        self.KeypadInitialize()
+        keypad.registerKeyPressHandler(self.key_pressed)
+
+        display.lcd_display_string("System Disarmed", 1)
         print("Disarmed")
+
         while True:
-            if self.a == False:
+            if self.active == False:
                 self.FSM.ToTransition("toArmed")
                 break
 
     def Exit(self):
         print("Exiting Disarmed")
+        keypad.unregisterKeyPressHandler(self.key_pressed)  # Disable disarmed key handler
 
-    def KeypadInitialize(self):
-        factory = rpi_gpio.KeypadFactory()
-        keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
-        keypad.registerKeyPressHandler(self.key_pressed)
 
     def key_pressed(self, key):
         try:
@@ -94,7 +101,7 @@ class Disarmed(State):
         # check if all sensors can be activated
         # +++++++++++++++++++++++++++++++++++++
         if key == "*":
-            self.a = False
+            self.active = False
 
 class Armed(State):
     ''' Arming state '''
@@ -105,8 +112,10 @@ class Armed(State):
 
     def Enter(self):
         print("Preparing to Arm")
+        display.lcd_clear()
+        display.lcd_display_string("System Arming", 1)
         # beep 10 seconds
-        for i in range(10):
+        for i in range(1):
             startTime = clock()
             timeInterval = 1
             while (startTime + timeInterval > clock()):
@@ -121,6 +130,9 @@ class Armed(State):
 
     def Execute(self):
         print("Armed")
+        display.lcd_clear()
+        display.lcd_display_string("System Armed", 1)
+
         while True:
             if self.a == False:
                 self.FSM.ToTransition("toArmed")
