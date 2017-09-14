@@ -79,6 +79,7 @@ class Disarmed(State):
     def Exit(self):
         print("Exiting Disarmed")
         keypad.unregisterKeyPressHandler(self.key_pressed)  # Disable disarmed key handler
+        self.active = True
 
 
     def key_pressed(self, key):
@@ -109,7 +110,7 @@ class Disarmed(State):
 
 class Armed(State):
     ''' Arming state '''
-    a = True
+    triggered = False
 
     def __init__(self, FSM):
         super(Armed, self).__init__(FSM)
@@ -117,6 +118,7 @@ class Armed(State):
     def MOTION(self, PIR_PIN):
         print("Motion Detected on pin" + str(PIR_PIN))
         display.lcd_display_string(str(PIR_PIN) + "Motion Detected", 2)
+        self.triggered = True
 
     def Enter(self):
         print("Preparing to Arm")
@@ -146,7 +148,7 @@ class Armed(State):
             GPIO.add_event_detect(PIR1_PIN, GPIO.RISING, callback=self.MOTION)
 
             while True:
-                if self.a == False:
+                if self.triggered == True:
                     self.FSM.ToTransition("toTriggered")
                     break
         except KeyboardInterrupt:
@@ -159,4 +161,20 @@ class Armed(State):
         print("Exiting Armed")
 
 
+class Triggered(State):
+    ''' The triggered state if one of the systems were tripped '''
 
+    def __init__(self, FSM):
+        super(Triggered, self).__init__(FSM)
+
+    def Enter(self):
+        print("Entering Triggered")
+
+    def Execute(self):
+        print("Triggered")
+
+        while True:
+            sleep(1)
+
+    def Exit(self):
+        print("Exiting Triggered")
