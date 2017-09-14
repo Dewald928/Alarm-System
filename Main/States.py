@@ -6,15 +6,19 @@ from time import sleep
 from gpiozero import Buzzer
 from pad4pi import rpi_gpio
 import lcddriver
+import RPi.GPIO as GPIO
 
 # Buzzer
 buzzer = Buzzer(26)
 # LCD Display
 display = lcddriver.lcd()
 display.lcd_display_string("System Disarmed", 1)
-#Keypad
+# Keypad
 factory = rpi_gpio.KeypadFactory()
 keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
+# PIR sensors
+PIR1_PIN = 7
+GPIO.setup(PIR1_PIN, GPIO.IN)
 # ===============================================
 # TRANSITIONS
 
@@ -110,6 +114,10 @@ class Armed(State):
     def __init__(self, FSM):
         super(Armed, self).__init__(FSM)
 
+    def MOTION(self, PIR_PIN):
+        print("Motion Detected on pin" + str(PIR_PIN))
+        display.lcd_display_string(str(PIR_PIN) + "Motion Detected", 2)
+
     def Enter(self):
         print("Preparing to Arm")
         display.lcd_clear()
@@ -133,10 +141,19 @@ class Armed(State):
         display.lcd_clear()
         display.lcd_display_string("System Armed", 1)
 
-        while True:
-            if self.a == False:
-                self.FSM.ToTransition("toArmed")
-                break
+        try:
+            # PIR sensors signal handler
+            GPIO.add_event_detect(PIR1_PIN, GPIO.RISING, callback=self.MOTION)
+
+            while True:
+                if self.a == False:
+                    self.FSM.ToTransition("toTriggered")
+                    break
+        except KeyboardInterrupt:
+            print("Quit")
+            GPIO.cleanup()
+
+
 
     def Exit(self):
         print("Exiting Armed")

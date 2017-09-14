@@ -2,12 +2,17 @@
 
 import time
 from Alarm_Class import Alarm
+import RPi.GPIO as GPIO
 
+try:
 
-if __name__ == '__main__':
-    a = Alarm()
-    a.Execute()
-    while True:
+    if __name__ == '__main__':
+        a = Alarm()
         a.Execute()
+        while True:
+            a.Execute()
 
-    print('Exiting program...')
+except KeyboardInterrupt:
+    print("Quit")
+    GPIO.cleanup()
+
