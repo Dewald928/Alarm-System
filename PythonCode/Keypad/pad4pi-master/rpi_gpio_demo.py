@@ -1,17 +1,17 @@
 #!/usr/bin/python
 
-from gpiozero import Buzzer
+# from gpiozero import Buzzer
 from time import sleep
 from pad4pi import rpi_gpio
 
 
-buzzer = Buzzer(26)
+# buzzer = Buzzer(26)
 
 
 def print_key(key):
-    buzzer.on()
-    sleep(0.1)
-    buzzer.off()
+    # buzzer.on()
+    # sleep(0.1)
+    # buzzer.off()
     print(key)
 
 

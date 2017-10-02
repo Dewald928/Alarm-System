@@ -3,22 +3,35 @@
 from random import randint
 from time import clock
 from time import sleep
-from gpiozero import Buzzer
+#from gpiozero import Buzzer
 from pad4pi import rpi_gpio
 import lcddriver
 import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
+
 
 # Buzzer
-buzzer = Buzzer(26)
-# LCD Display
-display = lcddriver.lcd()
-display.lcd_display_string("System Disarmed", 1)
-# Keypad
-factory = rpi_gpio.KeypadFactory()
-keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
+buzzer = 26
+GPIO.setup(buzzer, GPIO.OUT)
+GPIO.output(buzzer, 0)
 # PIR sensors
 PIR1_PIN = 7
 GPIO.setup(PIR1_PIN, GPIO.IN)
+
+# Door sensors
+
+
+
+# LCD Display
+display = lcddriver.lcd()
+# display.lcd_display_string("System Disarmed", 1)
+# Keypad
+factory = rpi_gpio.KeypadFactory()
+keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
+
+
+
+
 # ===============================================
 # TRANSITIONS
 
@@ -36,7 +49,7 @@ class Transition(object):
 # STATES
 
 class State(object):
-    ''' The base template state which all others will inherit from  '''
+    ''' The base GPIO.output(buzzer, 0)late state which all others will inherit from  '''
 
     def __init__(self, FSM):
         self.FSM = FSM
@@ -88,18 +101,18 @@ class Disarmed(State):
             int_key = int(key)
             if int_key >= 0 and int_key <= 9:
                 # digit_entered(key)
-                buzzer.on()
+                GPIO.output(buzzer, 1)
                 sleep(0.1)
-                buzzer.off()
+                GPIO.output(buzzer, 0)
         except ValueError:
             self.non_digit_entered(key)
-            buzzer.on()
+            GPIO.output(buzzer, 1)
             sleep(0.05)
-            buzzer.off()
+            GPIO.output(buzzer, 0)
             sleep(0.05)
-            buzzer.on()
+            GPIO.output(buzzer, 1)
             sleep(0.05)
-            buzzer.off()
+            GPIO.output(buzzer, 0)
 
     def non_digit_entered(self, key):
         # global entered_passcode
@@ -107,6 +120,7 @@ class Disarmed(State):
         # +++++++++++++++++++++++++++++++++++++
         if key == "*":
             self.active = False
+
 
 class Armed(State):
     ''' Arming state '''
@@ -130,12 +144,12 @@ class Armed(State):
             timeInterval = 1
             while (startTime + timeInterval > clock()):
                 pass
-            buzzer.on()
+            GPIO.output(buzzer, 1)
             sleep(0.1)
-            buzzer.off()
-        buzzer.on()
+            GPIO.output(buzzer, 0)
+        GPIO.output(buzzer, 1)
         sleep(2)
-        buzzer.off()
+        GPIO.output(buzzer, 0)
         super(Armed, self).Enter()
 
     def Execute(self):
@@ -143,38 +157,64 @@ class Armed(State):
         display.lcd_clear()
         display.lcd_display_string("System Armed", 1)
 
-        try:
-            # PIR sensors signal handler
-            GPIO.add_event_detect(PIR1_PIN, GPIO.RISING, callback=self.MOTION)
+        # PIR sensors signal handler
+        GPIO.add_event_detect(PIR1_PIN, GPIO.RISING, callback=self.MOTION)
 
-            while True:
-                if self.triggered == True:
-                    self.FSM.ToTransition("toTriggered")
-                    break
-        except KeyboardInterrupt:
-            print("Quit")
-            GPIO.cleanup()
-
-
+        while True:
+            if self.triggered == True:  # if one of the sensors are triggered go to triggered state
+                self.FSM.ToTransition("toTriggered")
+                break
 
     def Exit(self):
         print("Exiting Armed")
+        GPIO.remove_event_detect(PIR1_PIN)
 
 
 class Triggered(State):
-    ''' The triggered state if one of the systems were tripped '''
+    ''' The triggered state if one of the sensors were tripped '''
 
     def __init__(self, FSM):
         super(Triggered, self).__init__(FSM)
 
     def Enter(self):
         print("Entering Triggered")
+        display.lcd_clear()
+        display.lcd_display_string("Enter Password:", 1)
 
     def Execute(self):
         print("Triggered")
+        GPIO.output(buzzer, 1)
+        timeout = 0
+        while timeout < 30:
+            sleep(1)
+            timeout = timeout + 1
+            # +++++++++++++
+            # if correct password entered go to disarmed
+            # if psw wrong 3 times to to active
+        GPIO.output(buzzer, 0)
+        self.FSM.ToTransition("toActive")
+
+    def Exit(self):
+        print("Exiting Triggered")
+
+
+class Active(State):
+    ''' The Active state if one system timed out without correct code'''
+
+
+    def __init__(self, FSM):
+        super(Active, self).__init__(FSM)
+
+    def Enter(self):
+        print("Entering Active")
+
+    def Execute(self):
+        print("Active")
+        display.lcd_clear()
+        display.lcd_display_string("Sending Alarm", 1)
 
         while True:
             sleep(1)
 
     def Exit(self):
-        print("Exiting Triggered")
+        print("Exiting Active")

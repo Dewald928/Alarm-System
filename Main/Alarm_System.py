@@ -3,6 +3,9 @@
 import time
 from Alarm_Class import Alarm
 import RPi.GPIO as GPIO
+import lcddriver
+
+display = lcddriver.lcd()
 
 try:
 
@@ -13,6 +16,10 @@ try:
             a.Execute()
 
 except KeyboardInterrupt:
-    print("Quit")
+    print("Exiting Program")
     GPIO.cleanup()
+    display.lcd_clear()
+
+
+
 
