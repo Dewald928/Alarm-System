@@ -3,7 +3,6 @@
 from random import randint
 from time import clock
 from time import sleep
-#from gpiozero import Buzzer
 from pad4pi import rpi_gpio
 import lcddriver
 import RPi.GPIO as GPIO
@@ -15,11 +14,12 @@ buzzer = 26
 GPIO.setup(buzzer, GPIO.OUT)
 GPIO.output(buzzer, 0)
 # PIR sensors
-PIR1_PIN = 7
-GPIO.setup(PIR1_PIN, GPIO.IN)
+PIR = [7]
+GPIO.setup(PIR, GPIO.IN)
 
 # Door sensors
-
+DOOR = [16, 12]
+GPIO.setup(DOOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 
 # LCD Display
@@ -130,8 +130,13 @@ class Armed(State):
         super(Armed, self).__init__(FSM)
 
     def MOTION(self, PIR_PIN):
-        print("Motion Detected on pin" + str(PIR_PIN))
+        print("Motion Detected on pin " + str(PIR_PIN))
         display.lcd_display_string(str(PIR_PIN) + "Motion Detected", 2)
+        self.triggered = True
+
+    def DOOR_OPEN(self, PIN):
+        print("Door Contact Open on pin " + str(PIN))
+        display.lcd_display_string(str(PIN) + " Door Open", 2)
         self.triggered = True
 
     def Enter(self):
@@ -158,7 +163,9 @@ class Armed(State):
         display.lcd_display_string("System Armed", 1)
 
         # PIR sensors signal handler
-        GPIO.add_event_detect(PIR1_PIN, GPIO.RISING, callback=self.MOTION)
+        for pin in PIR: GPIO.add_event_detect(pin, GPIO.RISING, callback=self.MOTION)
+        # Door contact signal handler
+        for pin in DOOR: GPIO.add_event_detect(pin, GPIO.RISING, callback=self.DOOR_OPEN)
 
         while True:
             if self.triggered == True:  # if one of the sensors are triggered go to triggered state
@@ -167,7 +174,10 @@ class Armed(State):
 
     def Exit(self):
         print("Exiting Armed")
-        GPIO.remove_event_detect(PIR1_PIN)
+
+        # Remove interrupt handlers
+        for i in PIR: GPIO.remove_event_detect(i)
+        for j in DOOR: GPIO.remove_event_detect(j)
 
 
 class Triggered(State):
@@ -209,12 +219,21 @@ class Active(State):
         print("Entering Active")
 
     def Execute(self):
-        print("Active")
+        print("Weeee Wooooo Weeeee WOOOO!")
         display.lcd_clear()
         display.lcd_display_string("Sending Alarm", 1)
 
-        while True:
-            sleep(1)
+        # Sound Alarm
+
+        sleep(20)
+
+        # ++++++++++++++++++++
+        # Send Log to database
+        # ++++++++++++++++++++
+
+        # After correct password entered wil stop
+
+        self.FSM.ToTransition("toDisarmed")
 
     def Exit(self):
         print("Exiting Active")

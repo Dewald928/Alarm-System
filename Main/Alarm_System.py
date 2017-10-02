@@ -16,7 +16,7 @@ try:
             a.Execute()
 
 except KeyboardInterrupt:
-    print("Exiting Program")
+    print("(╯°□°）╯︵ ┻━┻")
     GPIO.cleanup()
     display.lcd_clear()
 
