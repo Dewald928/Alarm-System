@@ -25,7 +25,8 @@ GPIO.setup(DOOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # LCD Display
 display = lcddriver.lcd()
-# display.lcd_display_string("System Disarmed", 1)
+display.backlight_off()
+
 # Keypad
 factory = rpi_gpio.KeypadFactory()
 keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout and GPIO pin numbers
@@ -34,6 +35,7 @@ keypad = factory.create_4_by_3_keypad()  # makes assumptions about keypad layout
 # Passwords
 entered_passcode = ""
 correct_passcode = "1234"
+psw_entries = 3
 
 
 
@@ -86,7 +88,8 @@ class Disarmed(State):
     def Execute(self):
         keypad.registerKeyPressHandler(self.key_pressed)
 
-        display.lcd_display_string("System Disarmed", 1)
+        display.clear()
+        display.display_string("System Disarmed", 1)
         print("Disarmed")
 
         while True:
@@ -105,19 +108,10 @@ class Disarmed(State):
             print(key)
             int_key = int(key)
             if int_key >= 0 and int_key <= 9:
-                # digit_entered(key)
-                GPIO.output(buzzer, 1)
-                sleep(0.1)
-                GPIO.output(buzzer, 0)
+                singleBeep()
         except ValueError:
             self.non_digit_entered(key)
-            GPIO.output(buzzer, 1)
-            sleep(0.05)
-            GPIO.output(buzzer, 0)
-            sleep(0.05)
-            GPIO.output(buzzer, 1)
-            sleep(0.05)
-            GPIO.output(buzzer, 0)
+            doubleBeep()
 
     def non_digit_entered(self, key):
         # global entered_passcode
@@ -137,23 +131,23 @@ class Armed(State):
     def MOTION(self, PIR_PIN):
         write_lock.acquire()
         print("Motion Detected on pin " + str(PIR_PIN))
-        display.lcd_clear()
-        display.lcd_display_string(str(PIR_PIN) + "Motion Detected", 2)
+        display.clear()
+        display.display_string(str(PIR_PIN) + "Motion Detected", 2)
         self.triggered = True
         write_lock.release()
 
     def DOOR_OPEN(self, PIN):
         write_lock.acquire()
         print("Door Contact Open on pin " + str(PIN))
-        display.lcd_clear()
-        display.lcd_display_string(str(PIN) + " Door Open", 2)
+        display.clear()
+        display.display_string(str(PIN) + " Door Open", 2)
         self.triggered = True
         write_lock.release()
 
     def Enter(self):
         print("Preparing to Arm")
-        display.lcd_clear()
-        display.lcd_display_string("System Arming", 1)
+        display.clear()
+        display.display_string("System Arming", 1)
         # beep 10 seconds
         for i in range(1):
             startTime = clock()
@@ -170,8 +164,8 @@ class Armed(State):
 
     def Execute(self):
         print("Armed")
-        display.lcd_clear()
-        display.lcd_display_string("System Armed", 1)
+        display.clear()
+        display.display_string("System Armed", 1)
 
         # PIR sensors signal handler
         for pin in PIR: GPIO.add_event_detect(pin, GPIO.RISING, callback=self.MOTION)
@@ -193,21 +187,38 @@ class Armed(State):
 
 class Triggered(State):
     ''' The triggered state if one of the sensors were tripped '''
+    disarm = False
+    active = False
 
     def __init__(self, FSM):
         super(Triggered, self).__init__(FSM)
 
     def correct_passcode_entered(self):
         print("Passcode accepted. Access granted.")
+        self.disarm = True
 
     def incorrect_passcode_entered(self):
-        print("Incorrect passcode. Access denied.")
+        global psw_entries, entered_passcode
+        psw_entries = psw_entries - 1
+        entered_passcode = ""
+        print("Incorrect passcode. " + str(psw_entries) + " attempts left")
+        display.clear()
+        display.display_string("Incorrect Code!", 1)
+        display.display_string(str(psw_entries) + " Attempts Left", 2)
+        sleep(0.1)
+        GPIO.output(buzzer, 1)
+        if psw_entries <= 0:
+            self.active = True
 
     def digit_entered(self, key):
         global entered_passcode, correct_passcode
 
         entered_passcode += str(key)
         print(entered_passcode)
+        display.clear()
+        display.display_string("Enter Passcode:", 1)
+        display.display_string(entered_passcode, 2)
+
 
         if len(entered_passcode) == len(correct_passcode):
             if entered_passcode == correct_passcode:
@@ -221,37 +232,55 @@ class Triggered(State):
         if key == "*" and len(entered_passcode) > 0:
             entered_passcode = entered_passcode[:-1]
             print(entered_passcode)
+            display.clear()
+            display.display_string("Enter Passcode:", 1)
+            display.display_string(entered_passcode, 2)
 
     def key_pressed(self, key):
         try:
             int_key = int(key)
             if int_key >= 0 and int_key <= 9:
                 self.digit_entered(key)
+                singleBeep()
         except ValueError:
             self.non_digit_entered(key)
+            doubleBeep()
 
     def Enter(self):
         print("Entering Triggered")
         keypad.registerKeyPressHandler(self.key_pressed)  # signal handler
-        display.lcd_clear()
-        display.lcd_display_string("Enter Password:", 1)
+        display.clear()
+        display.display_string("Enter Password:", 1)
 
     def Execute(self):
         print("Triggered")
         GPIO.output(buzzer, 1)
+        time = 20
         timeout = 0
-        while timeout < 20:
+        while timeout < time:
             sleep(1)
             timeout = timeout + 1
             # +++++++++++++
-            # if correct password entered go to disarmed
-            # if psw wrong 3 times to to active
-        GPIO.output(buzzer, 0)
-        self.FSM.ToTransition("toActive")
+            if self.disarm == True:  # correct password, will disarm device
+                GPIO.output(buzzer, 0)
+                self.FSM.ToTransition("toDisarmed")
+                break
+            if self.active == True:  # after 3 wrong password attempt, alarm will go active
+                GPIO.output(buzzer, 0)
+                self.FSM.ToTransition("toActive")
+                break
+        if timeout >= time:
+            GPIO.output(buzzer, 0)
+            self.FSM.ToTransition("toActive")
 
     def Exit(self):
+        global entered_passcode, psw_entries
         print("Exiting Triggered")
         keypad.unregisterKeyPressHandler(self.key_pressed)  # Disable disarmed key handler
+        entered_passcode = ""
+        psw_entries = 3
+        self.disarm = False
+        self.active = False
 
 
 class Active(State):
@@ -265,12 +294,12 @@ class Active(State):
 
     def Execute(self):
         print("Weeee Wooooo Weeeee WOOOO!")
-        display.lcd_clear()
-        display.lcd_display_string("Sending Alarm", 1)
+        display.clear()
+        display.display_string("Sending Alarm", 1)
 
         # Sound Alarm
 
-        sleep(20)
+        sleep(5)
 
         # ++++++++++++++++++++
         # Send Log to database
@@ -282,3 +311,19 @@ class Active(State):
 
     def Exit(self):
         print("Exiting Active")
+
+
+def singleBeep():
+    GPIO.output(buzzer, 1)
+    sleep(0.1)
+    GPIO.output(buzzer, 0)
+
+
+def doubleBeep():
+    GPIO.output(buzzer, 1)
+    sleep(0.05)
+    GPIO.output(buzzer, 0)
+    sleep(0.05)
+    GPIO.output(buzzer, 1)
+    sleep(0.05)
+    GPIO.output(buzzer, 0)
