@@ -47,18 +47,9 @@ def key_pressed(key):
         int_key = int(key)
         if int_key >= 0 and int_key <= 9:
             digit_entered(key)
-            # buzzer.on()
-            # time.sleep(0.1)
-            # buzzer.off()
     except ValueError:
         non_digit_entered(key)
-        # buzzer.on()
-        # time.sleep(0.05)
-        # buzzer.off()
-        # time.sleep(0.05)
-        # buzzer.on()
-        # time.sleep(0.05)
-        # buzzer.off()
+
 try:
     factory = rpi_gpio.KeypadFactory()
     keypad = factory.create_4_by_3_keypad() # makes assumptions about keypad layout and GPIO pin numbers

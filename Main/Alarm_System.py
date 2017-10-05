@@ -17,8 +17,9 @@ try:
 
 except KeyboardInterrupt:
     print("(╯°□°）╯︵ ┻━┻")
-    GPIO.cleanup()
     display.lcd_clear()
+    GPIO.cleanup()
+
 
 
 
