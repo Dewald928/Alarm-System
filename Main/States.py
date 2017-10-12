@@ -20,7 +20,7 @@ GPIO.setup(buzzer, GPIO.OUT)
 GPIO.output(buzzer, 0)
 
 # PIR sensors
-PIR = [7]
+PIR = [7, 24]
 GPIO.setup(PIR, GPIO.IN)
 
 # Door sensors
@@ -137,23 +137,25 @@ class Armed(State):
         super(Armed, self).__init__(FSM)
 
     def MOTION(self, PIR_PIN):
-        global triggered_pin
-        triggered_pin = PIR_PIN
         write_lock.acquire()
-        print("Motion Detected on pin " + str(PIR_PIN))
-        display.clear()
-        display.display_string(str(PIR_PIN) + "Motion Detected", 2)
-        self.triggered = True
+        if (self.triggered == False):
+            global triggered_pin
+            triggered_pin = PIR_PIN
+            print("Motion Detected on pin " + str(PIR_PIN))
+            display.clear()
+            display.display_string(str(PIR_PIN) + "Motion Detected", 2)
+            self.triggered = True
         write_lock.release()
 
     def DOOR_OPEN(self, PIN):
-        global triggered_pin
-        triggered_pin = PIN
         write_lock.acquire()
-        print("Door Contact Open on pin " + str(PIN))
-        display.clear()
-        display.display_string(str(PIN) + " Door Open", 2)
-        self.triggered = True
+        if (self.triggered == False):
+            global triggered_pin
+            triggered_pin = PIN
+            print("Door Contact Open on pin " + str(PIN))
+            display.clear()
+            display.display_string(str(PIN) + " Door Open", 2)
+            self.triggered = True
         write_lock.release()
 
     def Enter(self):

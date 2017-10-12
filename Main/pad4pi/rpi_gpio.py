@@ -34,8 +34,8 @@ class KeypadFactory():
             ["*",0,"#"]
         ]
 
-        ROW_PINS = [4,14,15,17]
-        COL_PINS = [18,27,22]
+        ROW_PINS = [4,17,27,22]
+        COL_PINS = [10,9,11]
 
         return self.create_keypad(KEYPAD, ROW_PINS, COL_PINS)
 
