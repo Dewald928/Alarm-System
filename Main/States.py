@@ -20,11 +20,11 @@ GPIO.setup(buzzer, GPIO.OUT)
 GPIO.output(buzzer, 0)
 
 # PIR sensors
-PIR = [7, 24]
+PIR = [8, 24, 25, 7]
 GPIO.setup(PIR, GPIO.IN)
 
 # Door sensors
-DOOR = [16, 12]
+DOOR = [20, 21]
 GPIO.setup(DOOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Triggered Pin
@@ -372,8 +372,9 @@ class Active(State):
         # Send Log to database
         # ++++++++++++++++++++
 
+
         # After correct password entered wil stop
-        time = 20
+        time = 20  # annoy time
         timeout = 0
         while timeout < time:
             sleep(1)
