@@ -128,7 +128,14 @@ class Disarmed(State):
         # check if all sensors can be activated
         # +++++++++++++++++++++++++++++++++++++
         if key == "*":
-            self.active = False
+            if GPIO.input(DOOR[0]) or GPIO.input(DOOR[1]):
+                print("Door opened")
+                display.clear()
+                display.display_string("Close Doors", 1)
+            else:
+                print("Door not opened")
+                self.active = False
+
 
 
 class Armed(State):
@@ -390,6 +397,7 @@ class Active(State):
 
             c.setopt(c.WRITEDATA, buffer)
 
+            print('Performing Curl')
             c.perform()  # Make transfer and recieve URL information
             c.close()
 
@@ -401,10 +409,9 @@ class Active(State):
             c.close()
             # eType, eValue, eTb = pycurl.error.args
             # errno, message = eValue.args
-            print(str(e.args[0]))
+            print('Pycurl Error: ' + str(e.args[0]))
 
         # ++++++++++++++++++++
-
 
         # After correct password entered wil stop
         time = 20  # annoy time
