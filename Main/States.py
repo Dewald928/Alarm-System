@@ -9,7 +9,9 @@ import RPi.GPIO as GPIO
 import threading
 import time
 
-# from piglow import single
+#Networking
+import pycurl
+from io import BytesIO
 
 GPIO.setmode(GPIO.BCM)
 write_lock = threading.Lock()
@@ -370,6 +372,37 @@ class Active(State):
 
         # ++++++++++++++++++++
         # Send Log to database
+
+        """Transmit the following tuple to server:
+        (AlarmID,ACTIVATED,Timestamp)"""
+
+        from time import time
+        serverURL = 'http://192.168.137.98/insert.php'  # PHP Server address (local host using XAMPP)
+        alarmID = 255  # Alarm Unit registration number
+        timestamp = int(time())# Unix timestamp
+
+        try:
+            buffer = BytesIO()  # Captures reply from Server
+            c = pycurl.Curl()  # Create Curl Object
+            c.setopt(c.URL, serverURL + '?' +
+                     'alarmid=' + str(alarmID) +
+                     '&timestamp=' + str(timestamp))  # Input variables to send
+
+            c.setopt(c.WRITEDATA, buffer)
+
+            c.perform()  # Make transfer and recieve URL information
+            c.close()
+
+            body = buffer.getvalue()
+            print(body.decode('iso-8859-1'))  # Decode bytes to string
+            display.clear()
+            display.display_string("Alarm Sent", 1)
+        except pycurl.error as e:
+            c.close()
+            # eType, eValue, eTb = pycurl.error.args
+            # errno, message = eValue.args
+            print(str(e.args[0]))
+
         # ++++++++++++++++++++
 
 
