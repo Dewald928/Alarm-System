@@ -23,7 +23,7 @@ GPIO.output(buzzer, 0)
 
 # PIR sensors
 PIR = [8, 24, 25, 7]
-GPIO.setup(PIR, GPIO.IN)
+GPIO.setup(PIR, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Door sensors
 DOOR = [20, 21]
