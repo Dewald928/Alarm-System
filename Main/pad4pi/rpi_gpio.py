@@ -18,10 +18,10 @@ class KeypadFactory():
             ]
 
         if row_pins is None:
-            row_pins = [4,14,15,17]
+            row_pins = [17,27,22,10]
 
         if col_pins is None:
-            col_pins = [18,27,22]
+            col_pins = [9,11,5]
 
         return Keypad(keypad, row_pins, col_pins, key_delay)
 
@@ -34,8 +34,8 @@ class KeypadFactory():
             ["*",0,"#"]
         ]
 
-        ROW_PINS = [4,17,27,22]
-        COL_PINS = [10,9,11]
+        ROW_PINS = [17,27,22,9]
+        COL_PINS = [11,5,6]
 
         return self.create_keypad(KEYPAD, ROW_PINS, COL_PINS)
 
