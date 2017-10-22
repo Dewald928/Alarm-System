@@ -169,6 +169,7 @@ class Armed(State):
 
     def Enter(self):
         print("Preparing to Arm")
+        keypad.unregisterKeyPressHandler(Active.key_pressed)
         display.clear()
         display.display_string("System Arming", 1)
         # beep 10 seconds
@@ -306,6 +307,7 @@ class Triggered(State):
 class Active(State):
     ''' The Active state if one system timed out without correct code'''
     disarm = False
+    arm = False
 
     def __init__(self, FSM):
         super(Active, self).__init__(FSM)
@@ -424,12 +426,13 @@ class Active(State):
                 self.FSM.ToTransition("toDisarmed")
                 break
 
-        self.FSM.ToTransition("toDisarmed")
+        if self.disarm == False:  # timeout will arm device again
+            self.FSM.ToTransition("toArmed")
 
     def Exit(self):
         global entered_passcode, psw_entries
         print("Exiting Active")
-        keypad.unregisterKeyPressHandler(self.key_pressed)  # Disable disarmed key handler
+        #keypad.unregisterKeyPressHandler(self.key_pressed)  # Disable disarmed key handler
         entered_passcode = ""
         psw_entries = 3
         self.disarm = False
