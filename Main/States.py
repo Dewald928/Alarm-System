@@ -9,10 +9,144 @@ import RPi.GPIO as GPIO
 import threading
 import time
 
-#Networking
+# Networking ###########################################################################################################
 import pycurl
 from io import BytesIO
+import json
+import os
 
+serverURL = 'http://192.168.137.144/ServerJSONThreadModel.php' #PHP Server address (local host using XAMPP)
+
+#Buffer
+buffer = []
+bufferEmpty = True
+alarmID = '255' #Alarm Unit registration number
+
+#File IO
+logFilename = "TriggerLog.txt"
+
+#Delays
+delay_IFS = 0.1
+delay_backoff = 1
+
+
+class sendThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.alive = False
+
+    def run(self):
+        global buffer
+        global bufferEmpty
+        # Define States
+        IDLE = 1
+        SEND = 2
+        DISCONNECTED = 3
+
+        currentState = IDLE
+        response = [False, ""]
+        k = 0
+        while self.alive:
+            time.sleep(delay_IFS)
+            if currentState == IDLE:
+                if not bufferEmpty:
+                    currentState = SEND
+                    response = transmit()
+                    k = 0
+            if currentState == SEND:
+                if (response[0] == True) and (bufferEmpty):
+                    currentState = IDLE
+                if (response[0] == True) and (not bufferEmpty):
+                    response = transmit()
+                    k = 0
+                if response[0] == False:
+                    response = transmit()
+                    k = k + 1
+                if k >= 3:
+                    display.clear()
+                    display.display_string("Offline", 1)
+                    display.display_string("Error: " + str(response[1]), 2)
+                    #print("LCD Output:\nOffline\nError: " + str(response[1]))
+                    response = transmit()
+                    currentState = DISCONNECTED
+            if currentState == DISCONNECTED:
+                time.sleep(delay_backoff)
+                if response[0] == True:
+                    currentState = IDLE
+                    display.clear()
+                    display.display_string("Reconnected", 1)
+                if response[0] == False:
+                    response = transmit()
+
+def transmit():
+    """Transmit the following tuple to server:
+    (AlarmID,Timestamp1,Timestamp2...)"""
+    global buffer
+    global bufferEmpty
+    try:
+        threadLock.acquire()
+        post_data = {'alarmID': alarmID, 'timestamps': buffer}
+
+        jsonEncoder = json.JSONEncoder()
+        recieveBuffer = BytesIO()  # Captures reply from Server
+        c = pycurl.Curl()  # Create Curl Object
+        c.setopt(c.URL, serverURL)
+        c.setopt(c.POSTFIELDS, jsonEncoder.encode(post_data))
+        c.setopt(c.WRITEDATA, recieveBuffer)
+
+        c.perform()  # Make transfer and recieve URL information
+        c.close()
+        if os.path.isfile(logFilename):
+            os.remove(logFilename)
+        body = recieveBuffer.getvalue()
+        print(body.decode('iso-8859-1'))  # Decode bytes to string
+        buffer = []
+        bufferEmpty = True
+        threadLock.release()
+        return [True, ""]
+    except pycurl.error as e:
+        c.close()
+
+        with open(logFilename, 'w') as f:
+            json.dump(buffer, f)
+
+        try:
+            threadLock.release()
+        except:
+            pass
+
+        return [False, str(e.args[0])]
+
+def alertServer():
+    global buffer, bufferEmpty
+    threadLock.acquire()
+    buffer.append(str(int(time.time())))
+    bufferEmpty = False
+    threadLock.release()
+
+    time.sleep(10)
+
+def killTransmitThread():
+    transmitThread.alive = False
+    transmitThread.join()
+
+#Load unsent messages to buffer
+if os.path.isfile(logFilename):
+    try:
+        with open(logFilename, 'r') as f:
+            buffer = json.load(f)
+    except:
+        os.remove(logFilename)
+
+#Initialize Threading
+threadLock = threading.Lock()
+transmitThread = sendThread()
+transmitThread.alive = True
+transmitThread.start()
+########################################################################################################################
+
+#Hardware
+#########
 GPIO.setmode(GPIO.BCM)
 write_lock = threading.Lock()
 
@@ -379,41 +513,9 @@ class Active(State):
 
         # Sound Alarm
 
-        # ++++++++++++++++++++
-        # Send Log to database
-
-        """Transmit the following tuple to server:
-        (AlarmID,ACTIVATED,Timestamp)"""
-
-        from time import time
-        serverURL = 'http://192.168.137.98/insert.php'  # PHP Server address (local host using XAMPP)
-        alarmID = 255  # Alarm Unit registration number
-        timestamp = int(time())# Unix timestamp
-
-        try:
-            buffer = BytesIO()  # Captures reply from Server
-            c = pycurl.Curl()  # Create Curl Object
-            c.setopt(c.URL, serverURL + '?' +
-                     'alarmid=' + str(alarmID) +
-                     '&timestamp=' + str(timestamp))  # Input variables to send
-
-            c.setopt(c.WRITEDATA, buffer)
-
-            print('Performing Curl')
-            c.perform()  # Make transfer and recieve URL information
-            c.close()
-
-            body = buffer.getvalue()
-            print(body.decode('iso-8859-1'))  # Decode bytes to string
-            display.clear()
-            display.display_string("Alarm Sent", 1)
-        except pycurl.error as e:
-            c.close()
-            # eType, eValue, eTb = pycurl.error.args
-            # errno, message = eValue.args
-            print('Pycurl Error: ' + str(e.args[0]))
-
-        # ++++++++++++++++++++
+        # Networking +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        alertServer() # Send Alert to Server
+        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         # After correct password entered wil stop
         time = 20  # annoy time

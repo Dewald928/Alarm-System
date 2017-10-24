@@ -2,6 +2,7 @@
 
 import time
 from Alarm_Class import Alarm
+from States import killTransmitThread
 import RPi.GPIO as GPIO
 import lcddriver
 
@@ -19,6 +20,7 @@ except KeyboardInterrupt:
     print("(╯°□°）╯︵ ┻━┻")
     display.clear()
     GPIO.cleanup()
+    killTransmitThread()
 
 
 

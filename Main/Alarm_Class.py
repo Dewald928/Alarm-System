@@ -29,7 +29,7 @@ class Alarm(Char):
         self.FSM.AddTransition("toTriggered", Transition("Triggered"))
         self.FSM.AddTransition("toActive", Transition("Active"))
 
-        self.FSM.SetState("Disarmed")
+        self.FSM.SetState("Active")
 
     def Execute(self):
         self.FSM.Execute()
